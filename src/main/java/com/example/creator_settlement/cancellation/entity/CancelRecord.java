@@ -11,7 +11,7 @@ import java.time.OffsetDateTime;
 
 @Entity
 @Getter
-@Table(name = "cancel_record")
+@Table(name = "cancel_records")
 @NoArgsConstructor(access = lombok.AccessLevel.PROTECTED)
 public class CancelRecord {
     @Id

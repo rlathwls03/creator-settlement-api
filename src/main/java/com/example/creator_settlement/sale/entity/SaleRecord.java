@@ -11,7 +11,7 @@ import java.time.OffsetDateTime;
 
 @Entity
 @Getter
-@Table(name = "sale_record")
+@Table(name = "sale_records")
 @NoArgsConstructor(access = lombok.AccessLevel.PROTECTED)
 public class SaleRecord { // 강의 판매 기록
     @Id
