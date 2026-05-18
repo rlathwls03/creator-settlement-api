@@ -10,16 +10,16 @@ import lombok.NoArgsConstructor;
 @Entity
 @Getter
 @NoArgsConstructor(access = lombok.AccessLevel.PROTECTED) // JPA는 기본 생성자가 필요하지만, 객체의 무분별한 생성 막기 위해 protected
-@Table(name = "creator")
+@Table(name = "creators")
 public class Creator { // 크리에이터
     @Id
-    private String creatorId; // 크리에이터 ID
+    private String id; // 크리에이터 ID
 
     @Column(nullable = false)
-    private String creatorName; // 크리에이터 이름
+    private String name; // 크리에이터 이름
 
-    public Creator(String creatorId, String creatorName) {
-        this.creatorId = creatorId;
-        this.creatorName = creatorName;
+    public Creator(String id, String name) {
+        this.id = id;
+        this.name = name;
     }
 }

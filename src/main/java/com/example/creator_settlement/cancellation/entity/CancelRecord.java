@@ -15,7 +15,7 @@ import java.time.OffsetDateTime;
 @NoArgsConstructor(access = lombok.AccessLevel.PROTECTED)
 public class CancelRecord {
     @Id
-    private String cancelRecordId; // 취소된 강의 기록 ID
+    private String id; // 취소된 강의 기록 ID
 
     @Column(nullable = false)
     private String saleRecordId; // 원본 판매 내역 참조를 위한 판매 기록 ID
@@ -26,8 +26,8 @@ public class CancelRecord {
     @Column(nullable = false)
     private OffsetDateTime canceledAt; // 취소 일시
 
-    public CancelRecord(String cancelRecordId, String saleRecordId, Long refundAmount, OffsetDateTime canceledAt) {
-        this.cancelRecordId = cancelRecordId;
+    public CancelRecord(String id, String saleRecordId, Long refundAmount, OffsetDateTime canceledAt) {
+        this.id = id;
         this.saleRecordId = saleRecordId;
         this.refundAmount = refundAmount;
         this.canceledAt = canceledAt;

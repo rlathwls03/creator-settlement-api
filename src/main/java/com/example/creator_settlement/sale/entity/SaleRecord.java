@@ -15,7 +15,7 @@ import java.time.OffsetDateTime;
 @NoArgsConstructor(access = lombok.AccessLevel.PROTECTED)
 public class SaleRecord { // 강의 판매 기록
     @Id
-    private String saleRecordId; // 판매 강의 기록 ID
+    private String id; // 판매 강의 기록 ID
 
     @Column(nullable = false)
     private String courseId; // 판매된 강의 ID
@@ -24,16 +24,16 @@ public class SaleRecord { // 강의 판매 기록
     private String studentId; // 강의를 듣는 수강생 ID
 
     @Column(nullable = false)
-    private Long saleAmount; // 결제 금액
+    private Long amount; // 결제 금액
 
     @Column(nullable = false)
     private OffsetDateTime paidAt; // 결제 일시
 
-    public SaleRecord(String saleRecordId, String courseId, String studentId, Long saleAmount, OffsetDateTime paidAt) {
-        this.saleRecordId = saleRecordId;
+    public SaleRecord(String id, String courseId, String studentId, Long amount, OffsetDateTime paidAt) {
+        this.id = id;
         this.courseId = courseId;
         this.studentId = studentId;
-        this.saleAmount = saleAmount;
+        this.amount = amount;
         this.paidAt = paidAt;
     }
 }
