@@ -273,13 +273,15 @@ GET /api/settlements/monthly?creatorId=creator-1&month=2025-03
 
 ```json
 {
-  "creatorId":"creator-1",
-  "month":"2025-03",
-  "totalSalesAmount":260000,
-  "totalRefundAmount":110000,
-  "netSalesAmount":150000,
-  "platformFeeAmount":30000,
-  "payoutAmount":120000
+  "creatorId": "creator-1",
+  "month": "2025-03",
+  "totalSalesAmount": 260000,
+  "totalRefundAmount": 110000,
+  "netSalesAmount": 150000,
+  "platformFeeAmount": 30000,
+  "payoutAmount": 120000,
+  "saleCount": 4,
+  "cancelCount": 2
 }
 ```
 
