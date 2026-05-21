@@ -11,8 +11,13 @@ import com.example.creator_settlement.course.repository.CourseRepository;
 import com.example.creator_settlement.sale.entity.SaleRecord;
 import com.example.creator_settlement.sale.repository.SaleRecordRepository;
 import com.example.creator_settlement.settlement.dto.SettlementResponse;
+import com.example.creator_settlement.settlement.entity.Settlement;
+import com.example.creator_settlement.settlement.entity.SettlementStatus;
+import com.example.creator_settlement.settlement.repository.SettlementRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.OffsetDateTime;
 import java.time.YearMonth;
@@ -37,10 +42,20 @@ public class SettlementService {
 
     private final CreatorRepository creatorRepository;
 
+    private final SettlementRepository settlementRepository;
+
     public SettlementResponse getMonthlySettlement(String creatorId, String month) {
         // "2025-03" 같은 문자열을 YearMonth 객체로 변환
         // -> 연도 + 월만 관리하는 Java 클래스
         YearMonth yearMonth = YearMonth.parse(month);
+
+        // 동일 기간 중복 정산 방지
+        if (settlementRepository.existsByCreatorIdAndMonth(creatorId, month)) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "이미 해당 기간의 정산이 존재합니다."
+            );
+        }
 
         // 조회 시작일 계산
         // 예: 2025-03-01 00:00:00 +09:00
@@ -96,19 +111,44 @@ public class SettlementService {
 
         // 11. 최종 결과를 DTO에 담아서 반환
         // 이 객체가 JSON 응답으로 변환됨
+        Settlement settlement = new Settlement(
+                creatorId + "-" + month,
+                creatorId,
+                month,
+
+                totalSalesAmount,
+                totalRefundAmount,
+                netSalesAmount,
+
+                platformFeeAmount,
+                payoutAmount,
+
+                sales.size(),
+                cancels.size(),
+
+                SettlementStatus.PENDING,
+
+                OffsetDateTime.now(),
+
+                null,
+                null
+        );
+
+        settlementRepository.save(settlement);
+
         return new SettlementResponse(
-            creatorId, // 크리에이터 ID
-            month, // 조회 월
+                creatorId,
+                month,
 
-            totalSalesAmount, // 총 판매 금액
-            totalRefundAmount, // 총 환불 금액
-            netSalesAmount, // 순 판매 금액
+                totalSalesAmount,
+                totalRefundAmount,
+                netSalesAmount,
 
-            platformFeeAmount, // 플랫폼 수수료
-            payoutAmount, // 실제 정산 금액
+                platformFeeAmount,
+                payoutAmount,
 
-            sales.size(), // 판매 건수
-            cancels.size() // 취소 건수
+                sales.size(),
+                cancels.size()
         );
     }
 
@@ -161,5 +201,24 @@ public class SettlementService {
                 totalPayout,
                 settlements
         );
+    }
+
+    public void confirmSettlement(String creatorId, String month) {
+        Settlement settlement = settlementRepository
+                .findByCreatorIdAndMonth(creatorId, month)
+                .orElseThrow(() -> new RuntimeException("정산 없음"));
+
+        settlement.confirm();
+
+        settlementRepository.save(settlement);
+    }
+
+    public void paySettlement(String creatorId, String month) {
+        Settlement settlement = settlementRepository
+                .findByCreatorIdAndMonth(creatorId, month)
+                .orElseThrow(() -> new RuntimeException("정산 없음"));
+        settlement.pay();
+
+        settlementRepository.save(settlement);
     }
 }

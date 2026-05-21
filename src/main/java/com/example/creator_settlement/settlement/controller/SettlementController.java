@@ -8,11 +8,9 @@ import com.example.creator_settlement.settlement.service.SettlementService;
 // 생성자 자동 생성
 import lombok.RequiredArgsConstructor;
 // Spring에게 "이 클래스는 Controller야"라고 알려줌
-import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.*;
 // URL 파라미터 받기 위한 어노테이션
-import org.springframework.web.bind.annotation.RequestParam;
 // REST API Controller 선언
-import org.springframework.web.bind.annotation.RestController;
 
 import java.time.OffsetDateTime;
 
@@ -48,5 +46,18 @@ public class SettlementController {
     @GetMapping("/api/admin/settlements")
     public AdminSettlementSummaryResponse getAdminSettlementSummary(@RequestParam String startDate, String endDate) {
         return settlementService.getAdminSettlementSummary(startDate, endDate);
+    }
+
+    @PostMapping("/api/settlements/confirm")
+    public String confirmSettlement(@RequestParam String creatorId,
+                                    @RequestParam String month) {
+        settlementService.confirmSettlement(creatorId, month);
+        return "정산 확정 완료";
+    }
+
+    @PostMapping("/api/settlements/pay")
+    public String paySettlement(@RequestParam String creatorId, @RequestParam String month) {
+        settlementService.paySettlement(creatorId, month);
+        return "지급 완료";
     }
 }
