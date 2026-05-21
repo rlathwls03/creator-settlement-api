@@ -45,7 +45,7 @@ public class SettlementController {
 
     // 운영자용 정산 내역 집계 API
     @GetMapping("/api/admin/settlements")
-    public AdminSettlementSummaryResponse getAdminSettlementSummary(@RequestParam String startDate, String endDate) {
+    public AdminSettlementSummaryResponse getAdminSettlementSummary(@RequestParam String startDate, @RequestParam String endDate) {
         return settlementService.getAdminSettlementSummary(startDate, endDate);
     }
 
