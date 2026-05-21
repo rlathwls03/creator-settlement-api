@@ -15,10 +15,14 @@ import com.example.creator_settlement.settlement.entity.Settlement;
 import com.example.creator_settlement.settlement.entity.SettlementStatus;
 import com.example.creator_settlement.settlement.repository.SettlementRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.nio.charset.StandardCharsets;
 import java.time.OffsetDateTime;
 import java.time.YearMonth;
 import java.time.ZoneOffset;
@@ -220,5 +224,23 @@ public class SettlementService {
         settlement.pay();
 
         settlementRepository.save(settlement);
+    }
+
+    // 정산 내역 엑셀 다운로드
+    public ResponseEntity<byte[]> exportSettlement(@RequestParam String startDate, @RequestParam String endDate) {
+        AdminSettlementSummaryResponse result = getAdminSettlementSummary(startDate, endDate);
+
+        StringBuilder csv = new StringBuilder();
+
+        csv.append("creatorId, payoutAmount\n");
+
+        for (AdminSettlementResponse settlement : result.getSettlements()) {
+            csv.append(settlement.getCreatorId()).append(",").append(settlement.getPayoutAmount()).append("\n");
+        }
+
+        return ResponseEntity
+                .ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=settlements.csv")
+                .body(csv.toString().getBytes(StandardCharsets.UTF_8));
     }
 }

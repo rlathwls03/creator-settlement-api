@@ -8,6 +8,7 @@ import com.example.creator_settlement.settlement.service.SettlementService;
 // 생성자 자동 생성
 import lombok.RequiredArgsConstructor;
 // Spring에게 "이 클래스는 Controller야"라고 알려줌
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 // URL 파라미터 받기 위한 어노테이션
 // REST API Controller 선언
@@ -59,5 +60,11 @@ public class SettlementController {
     public String paySettlement(@RequestParam String creatorId, @RequestParam String month) {
         settlementService.paySettlement(creatorId, month);
         return "지급 완료";
+    }
+
+    // 정산 내역 엑셀 다운로드 API
+    @GetMapping("/api/admin/settlements/export")
+    public ResponseEntity<byte[]> exportSettlement(@RequestParam String startDate, @RequestParam String endDate) {
+        return settlementService.exportSettlement(startDate, endDate);
     }
 }
