@@ -2,6 +2,8 @@ package com.example.creator_settlement.settlement.service;
 
 import com.example.creator_settlement.creator.entity.Creator;
 import com.example.creator_settlement.creator.repository.CreatorRepository;
+import com.example.creator_settlement.fee.entity.FeePolicy;
+import com.example.creator_settlement.fee.repository.FeePolicyRepository;
 import com.example.creator_settlement.settlement.dto.AdminSettlementResponse;
 import com.example.creator_settlement.settlement.dto.AdminSettlementSummaryResponse;
 import com.example.creator_settlement.cancellation.entity.CancelRecord;
@@ -23,6 +25,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.YearMonth;
 import java.time.ZoneOffset;
@@ -47,6 +50,9 @@ public class SettlementService {
     private final CreatorRepository creatorRepository;
 
     private final SettlementRepository settlementRepository;
+
+    // 수수료 정책
+    private final FeePolicyRepository feePolicyRepository;
 
     public SettlementResponse getMonthlySettlement(String creatorId, String month) {
         // "2025-03" 같은 문자열을 YearMonth 객체로 변환
@@ -108,7 +114,18 @@ public class SettlementService {
         long netSalesAmount = totalSalesAmount - totalRefundAmount;
 
         // 9. 플랫폼 수수료 계산
-        long platformFeeAmount = netSalesAmount * PLATFORM_FEE_RATE / 100;
+        LocalDate settlementDate = yearMonth.atDay(1);
+
+        FeePolicy feePolicy = feePolicyRepository
+                .findFirstByEffectiveFromLessThanEqualAndEffectiveToGreaterThanEqual(
+                        settlementDate,
+                        settlementDate
+                )
+                .orElseThrow(() -> new RuntimeException("적용 가능한 수수료 정책이 없습니다."));
+
+        int feeRate = feePolicy.getFeeRate();
+
+        long platformFeeAmount = netSalesAmount * feeRate / 100;
 
         // 10. 실제 정산 예정 금액 계산
         long payoutAmount = netSalesAmount - platformFeeAmount;

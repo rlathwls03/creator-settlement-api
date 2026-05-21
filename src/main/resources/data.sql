@@ -22,3 +22,9 @@ INSERT INTO cancel_records (id, sale_record_id, refund_amount, canceled_at) VALU
        ('cancel-1', 'sale-3', 80000, '2025-03-25 10:00:00'),
        ('cancel-2', 'sale-4', 30000, '2025-03-26 10:00:00'),
        ('cancel-3', 'sale-5', 60000, '2025-02-01 10:00:00');
+
+INSERT INTO fee_policy (id, fee_rate, effective_from, effective_to)
+VALUES ('fee-2025-01', 20, '2025-01-01', '2025-03-31');
+
+INSERT INTO fee_policy (id, fee_rate, effective_from, effective_to)
+VALUES ('fee-2025-04', 15, '2025-04-01', '2025-12-31');
