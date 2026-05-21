@@ -21,7 +21,6 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.nio.charset.StandardCharsets;
@@ -35,7 +34,7 @@ import java.util.List;
 @RequiredArgsConstructor // lombok이 생성자 주입 자동화
 public class SettlementService {
     // [임시]수수료율 20% 고정
-    private static final int PLATFORM_FEE_RATE = 20;
+//    private static final int PLATFORM_FEE_RATE = 20;
 
     // creatorId와 month를 받음
     // 해당 creator의 강의 목록 조회
@@ -57,13 +56,33 @@ public class SettlementService {
     public SettlementResponse getMonthlySettlement(String creatorId, String month) {
         // "2025-03" 같은 문자열을 YearMonth 객체로 변환
         // -> 연도 + 월만 관리하는 Java 클래스
-        YearMonth yearMonth = YearMonth.parse(month);
+        YearMonth yearMonth;
+
+        try {
+            yearMonth = YearMonth.parse(month);
+        } catch (Exception e) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "month 형식은 yyyy-MM 입니다."
+            );
+        }
 
         // 동일 기간 중복 정산 방지
-        if (settlementRepository.existsByCreatorIdAndMonth(creatorId, month)) {
-            throw new ResponseStatusException(
-                    HttpStatus.CONFLICT,
-                    "이미 해당 기간의 정산이 존재합니다."
+        var existingSettlement = settlementRepository.findByCreatorIdAndMonth(creatorId, month);
+
+        if (existingSettlement.isPresent()) {
+            Settlement s = existingSettlement.get();
+
+            return new SettlementResponse(
+                    s.getCreatorId(),
+                    s.getMonth(),
+                    s.getTotalSalesAmount(),
+                    s.getTotalRefundAmount(),
+                    s.getNetSalesAmount(),
+                    s.getPlatformFeeAmount(),
+                    s.getPayoutAmount(),
+                    s.getSaleCount(),
+                    s.getCancelCount()
             );
         }
 
@@ -97,12 +116,20 @@ public class SettlementService {
 
         // 4. 판매 내역에서 saleRecordId만 추출
         // CancelRecord는 saleRecordId를 기준으로 연결
-        List<String> saleRecordIds = sales.stream()
+        List<SaleRecord> allCreatorSales =
+                saleRecordRepository.findByCourseIdIn(courseIds);
+
+        List<String> allCreatorSaleIds = allCreatorSales.stream()
                 .map(SaleRecord::getId)
                 .toList();
 
-        // 5. 해당 판매들의 취소 내역 조회
-        List<CancelRecord> cancels = cancelRecordRepository.findBySaleRecordIdInAndCanceledAtBetween(saleRecordIds, startDate, endDate);
+        List<CancelRecord> cancels = allCreatorSaleIds.isEmpty()
+                ? List.of()
+                : cancelRecordRepository.findBySaleRecordIdInAndCanceledAtBetween(
+                allCreatorSaleIds,
+                startDate,
+                endDate
+        );
 
         // 6. 총 판매 금액 계산
         long totalSalesAmount = sales.stream().mapToLong(SaleRecord::getAmount).sum();
@@ -114,14 +141,17 @@ public class SettlementService {
         long netSalesAmount = totalSalesAmount - totalRefundAmount;
 
         // 9. 플랫폼 수수료 계산
-        LocalDate settlementDate = yearMonth.atDay(1);
+        LocalDate feeTargetDate = startDate.toLocalDate();
 
         FeePolicy feePolicy = feePolicyRepository
                 .findFirstByEffectiveFromLessThanEqualAndEffectiveToGreaterThanEqual(
-                        settlementDate,
-                        settlementDate
+                        feeTargetDate,
+                        feeTargetDate
                 )
-                .orElseThrow(() -> new RuntimeException("적용 가능한 수수료 정책이 없습니다."));
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.UNPROCESSABLE_ENTITY,
+                        "적용 가능한 수수료 정책이 없습니다."
+                ));
 
         int feeRate = feePolicy.getFeeRate();
 
@@ -190,12 +220,21 @@ public class SettlementService {
                     List<SaleRecord> sales = saleRecordRepository
                             .findByCourseIdInAndPaidAtBetween(courseIds, start, end);
 
-                    List<String> saleRecordIds = sales.stream()
+                    List<SaleRecord> allCreatorSales =
+                            saleRecordRepository.findByCourseIdIn(courseIds);
+
+                    List<String> allCreatorSaleIds = allCreatorSales.stream()
                             .map(SaleRecord::getId)
                             .toList();
 
-                    List<CancelRecord> cancels = cancelRecordRepository
-                            .findBySaleRecordIdInAndCanceledAtBetween(saleRecordIds, start, end);
+                    List<CancelRecord> cancels =
+                            allCreatorSaleIds.isEmpty()
+                                    ? List.of()
+                                    : cancelRecordRepository.findBySaleRecordIdInAndCanceledAtBetween(
+                                    allCreatorSaleIds,
+                                    start,
+                                    end
+                            );
 
                     long totalSalesAmount = sales.stream()
                             .mapToLong(SaleRecord::getAmount)
@@ -206,7 +245,24 @@ public class SettlementService {
                             .sum();
 
                     long netSalesAmount = totalSalesAmount - totalRefundAmount;
-                    long platformFeeAmount = netSalesAmount * PLATFORM_FEE_RATE / 100;
+
+                    LocalDate feeTargetDate = start.toLocalDate();
+
+                    FeePolicy feePolicy =
+                            feePolicyRepository
+                                    .findFirstByEffectiveFromLessThanEqualAndEffectiveToGreaterThanEqual(
+                                            feeTargetDate,
+                                            feeTargetDate
+                                    )
+                                    .orElseThrow(() -> new ResponseStatusException(
+                                            HttpStatus.UNPROCESSABLE_ENTITY,
+                                            "수수료 정책 없음"
+                                    ));
+
+                    int feeRate = feePolicy.getFeeRate();
+
+                    long platformFeeAmount =
+                            netSalesAmount * feeRate / 100;
                     long payoutAmount = netSalesAmount - platformFeeAmount;
 
                     return new AdminSettlementResponse(
@@ -227,9 +283,19 @@ public class SettlementService {
     public void confirmSettlement(String creatorId, String month) {
         Settlement settlement = settlementRepository
                 .findByCreatorIdAndMonth(creatorId, month)
-                .orElseThrow(() -> new RuntimeException("정산 없음"));
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "정산을 찾을 수 없습니다."
+                ));
 
-        settlement.confirm();
+        try {
+            settlement.confirm();
+        } catch (IllegalStateException e) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    e.getMessage()
+            );
+        }
 
         settlementRepository.save(settlement);
     }
@@ -237,14 +303,25 @@ public class SettlementService {
     public void paySettlement(String creatorId, String month) {
         Settlement settlement = settlementRepository
                 .findByCreatorIdAndMonth(creatorId, month)
-                .orElseThrow(() -> new RuntimeException("정산 없음"));
-        settlement.pay();
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "정산을 찾을 수 없습니다."
+                ));
+
+        try {
+            settlement.pay();
+        } catch (IllegalStateException e) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    e.getMessage()
+            );
+        }
 
         settlementRepository.save(settlement);
     }
 
     // 정산 내역 엑셀 다운로드
-    public ResponseEntity<byte[]> exportSettlement(@RequestParam String startDate, @RequestParam String endDate) {
+    public ResponseEntity<byte[]> exportSettlement(String startDate, String endDate) {
         AdminSettlementSummaryResponse result = getAdminSettlementSummary(startDate, endDate);
 
         StringBuilder csv = new StringBuilder();

@@ -48,11 +48,19 @@ public class Settlement {
 
     // 객체 지향 캡슐화
     public void confirm() {
+        if (this.status != SettlementStatus.PENDING) {
+            throw new IllegalStateException("PENDING 상태에서만 확정할 수 있습니다.");
+        }
+
         this.status = SettlementStatus.CONFIRMED;
         this.confirmedAt = OffsetDateTime.now();
     }
 
     public void pay() {
+        if (this.status != SettlementStatus.CONFIRMED) {
+            throw new IllegalStateException("CONFIRMED 상태에서만 지급할 수 있습니다.");
+        }
+
         this.status = SettlementStatus.PAID;
         this.paidAt = OffsetDateTime.now();
     }

@@ -7,7 +7,4 @@ import java.util.Optional;
 
 public interface SettlementRepository extends JpaRepository<Settlement, String> {
     Optional<Settlement> findByCreatorIdAndMonth(String creatorId, String month);
-
-    // 동일 기간 중복 정산 방지
-    boolean existsByCreatorIdAndMonth(String creatorId, String month);
 }
