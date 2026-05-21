@@ -1,6 +1,7 @@
 package com.example.creator_settlement.settlement.controller;
 
 // 정산 결과를 담아서 응답으로 보낼 DTO
+import com.example.creator_settlement.settlement.dto.AdminSettlementSummaryResponse;
 import com.example.creator_settlement.settlement.dto.SettlementResponse;
 // 실제 정산 계산 로직이 들어있는 Service
 import com.example.creator_settlement.settlement.service.SettlementService;
@@ -12,6 +13,8 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 // REST API Controller 선언
 import org.springframework.web.bind.annotation.RestController;
+
+import java.time.OffsetDateTime;
 
 // 사용자가 URL(API)로 요청 -> Service를 호출 -> 결과 반환
 
@@ -39,5 +42,11 @@ public class SettlementController {
         //
         // 수행 후 결과 반환
         return settlementService.getMonthlySettlement(creatorId, month);
+    }
+
+    // 운영자용 정산 내역 집계 API
+    @GetMapping("/api/admin/settlements")
+    public AdminSettlementSummaryResponse getAdminSettlementSummary(@RequestParam String startDate, String endDate) {
+        return settlementService.getAdminSettlementSummary(startDate, endDate);
     }
 }

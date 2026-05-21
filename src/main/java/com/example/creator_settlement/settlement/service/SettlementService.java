@@ -1,5 +1,9 @@
 package com.example.creator_settlement.settlement.service;
 
+import com.example.creator_settlement.creator.entity.Creator;
+import com.example.creator_settlement.creator.repository.CreatorRepository;
+import com.example.creator_settlement.settlement.dto.AdminSettlementResponse;
+import com.example.creator_settlement.settlement.dto.AdminSettlementSummaryResponse;
 import com.example.creator_settlement.cancellation.entity.CancelRecord;
 import com.example.creator_settlement.cancellation.repository.CancelRecordRepository;
 import com.example.creator_settlement.course.entity.Course;
@@ -14,7 +18,6 @@ import java.time.OffsetDateTime;
 import java.time.YearMonth;
 import java.time.ZoneOffset;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor // lombok이 생성자 주입 자동화
@@ -31,6 +34,8 @@ public class SettlementService {
 
     // 해당 강의들의 취소 내역 조회
     private final CancelRecordRepository cancelRecordRepository;
+
+    private final CreatorRepository creatorRepository;
 
     public SettlementResponse getMonthlySettlement(String creatorId, String month) {
         // "2025-03" 같은 문자열을 YearMonth 객체로 변환
@@ -58,14 +63,18 @@ public class SettlementService {
 
         // 2. 조회한 강의들에서 courseId만 추출
         // 이유: SaleRecord는 creatorId가 없고 courseId만 있기 때문
-        List<String> courseIds = courses.stream().map(Course::getId).collect(Collectors.toList()); // Course 객체 -> id만 꺼냄
+        List<String> courseIds = courses.stream()
+                .map(Course::getId)
+                .toList(); // Course 객체 -> id만 꺼냄
 
         // 3. 해당 강의들의 판매 내역 조회
         List<SaleRecord> sales = saleRecordRepository.findByCourseIdInAndPaidAtBetween(courseIds, startDate, endDate);
 
         // 4. 판매 내역에서 saleRecordId만 추출
         // CancelRecord는 saleRecordId를 기준으로 연결
-        List<String> saleRecordIds = sales.stream().map(SaleRecord::getId).collect(Collectors.toList());
+        List<String> saleRecordIds = sales.stream()
+                .map(SaleRecord::getId)
+                .toList();
 
         // 5. 해당 판매들의 취소 내역 조회
         List<CancelRecord> cancels = cancelRecordRepository.findBySaleRecordIdInAndCanceledAtBetween(saleRecordIds, startDate, endDate);
@@ -100,6 +109,57 @@ public class SettlementService {
 
             sales.size(), // 판매 건수
             cancels.size() // 취소 건수
+        );
+    }
+
+    public AdminSettlementSummaryResponse getAdminSettlementSummary(String startDate, String endDate) {
+        OffsetDateTime start = OffsetDateTime.parse(startDate);
+        OffsetDateTime end = OffsetDateTime.parse(endDate);
+
+        List<Creator> creators = creatorRepository.findAll();
+
+        List<AdminSettlementResponse> settlements = creators.stream()
+                .map(creator -> {
+                    List<Course> courses = courseRepository.findByCreatorId(creator.getId());
+
+                    List<String> courseIds = courses.stream()
+                            .map(Course::getId)
+                            .toList();
+
+                    List<SaleRecord> sales = saleRecordRepository
+                            .findByCourseIdInAndPaidAtBetween(courseIds, start, end);
+
+                    List<String> saleRecordIds = sales.stream()
+                            .map(SaleRecord::getId)
+                            .toList();
+
+                    List<CancelRecord> cancels = cancelRecordRepository
+                            .findBySaleRecordIdInAndCanceledAtBetween(saleRecordIds, start, end);
+
+                    long totalSalesAmount = sales.stream()
+                            .mapToLong(SaleRecord::getAmount)
+                            .sum();
+
+                    long totalRefundAmount = cancels.stream()
+                            .mapToLong(CancelRecord::getRefundAmount)
+                            .sum();
+
+                    long netSalesAmount = totalSalesAmount - totalRefundAmount;
+                    long platformFeeAmount = netSalesAmount * PLATFORM_FEE_RATE / 100;
+                    long payoutAmount = netSalesAmount - platformFeeAmount;
+
+                    return new AdminSettlementResponse(
+                            creator.getId(),
+                            payoutAmount
+                    );
+                })
+                .toList();
+
+        long totalPayout = settlements.stream().mapToLong(AdminSettlementResponse::getPayoutAmount).sum();
+
+        return new AdminSettlementSummaryResponse(
+                totalPayout,
+                settlements
         );
     }
 }
