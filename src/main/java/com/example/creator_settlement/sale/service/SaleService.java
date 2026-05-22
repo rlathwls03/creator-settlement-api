@@ -8,6 +8,7 @@ import com.example.creator_settlement.sale.repository.SaleRecordRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.util.List;
 
@@ -23,17 +24,17 @@ public class SaleService {
             OffsetDateTime startDate,
             OffsetDateTime endDate
     ) {
-        // 크리에이터가 가진 강의 찾기
+        LocalDateTime start = startDate.toLocalDateTime();
+        LocalDateTime end = endDate.toLocalDateTime();
+
         List<Course> courses = courseRepository.findByCreatorId(creatorId);
-        // 강의 객체 전체가 아닌 판매 조회에 필요한 courseId만 추출
         List<String> courseIds = courses.stream()
                 .map(Course::getId)
                 .toList();
-        // 강의들의 판매 내역 중, 결제일이 조회 기간 안에 있는 것만 가져옴
-        List<SaleRecord> sales = saleRecordRepository.findByCourseIdInAndPaidAtBetween(
+        List<SaleRecord> sales = saleRecordRepository.findByCourseIdInAndPaidAtGreaterThanEqualAndPaidAtLessThan(
                 courseIds,
-                startDate,
-                endDate
+                start,
+                end
         );
         // Entity를 DTO로 변환하여 반환
         return sales.stream()

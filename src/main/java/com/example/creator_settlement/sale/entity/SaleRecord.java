@@ -7,7 +7,7 @@ import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-import java.time.OffsetDateTime;
+import java.time.LocalDateTime;
 
 @Entity
 @Getter
@@ -27,9 +27,9 @@ public class SaleRecord { // 강의 판매 기록
     private Long amount; // 결제 금액
 
     @Column(nullable = false)
-    private OffsetDateTime paidAt; // 결제 일시
+    private LocalDateTime paidAt; // 결제 일시 (KST)
 
-    public SaleRecord(String id, String courseId, String studentId, Long amount, OffsetDateTime paidAt) {
+    public SaleRecord(String id, String courseId, String studentId, Long amount, LocalDateTime paidAt) {
         this.id = id;
         this.courseId = courseId;
         this.studentId = studentId;

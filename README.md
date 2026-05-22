@@ -61,11 +61,97 @@ spring.datasource.password=root
 
 ---
 
-### 3. 접속 정보
+### 3. 동작 확인
+
+애플리케이션 실행 후 아래 URL에서 Swagger UI로 전체 API를 확인하고 테스트할 수 있습니다.
 
 ```
-http://localhost:8080
+http://localhost:8080/swagger-ui/index.html
 ```
+
+---
+
+### 4. 주요 시나리오 검증 순서
+
+앱 실행 후 샘플 데이터가 자동으로 로드되며, 아래 순서대로 Swagger UI에서 검증할 수 있습니다.
+
+**1) 크리에이터 월별 정산 조회** `GET /api/settlements/monthly`
+```
+creatorId: creator-1
+month: 2025-03
+```
+예상 결과: `totalSalesAmount: 260000` / `totalRefundAmount: 110000` / `netSalesAmount: 150000` / `platformFeeAmount: 30000` / `payoutAmount: 120000`
+
+---
+
+**2) 부분 환불 반영 확인** `GET /api/settlements/monthly`
+
+sale-4(80,000원)에 대해 cancel-2(30,000원)만 환불된 케이스입니다.
+```
+creatorId: creator-1
+month: 2025-03
+```
+예상 결과: 위 1번 응답에서 `totalRefundAmount`가 80,000(전액) 이 아닌 110,000(cancel-1 전액 + cancel-2 부분) 으로 반영되어 있음
+
+---
+
+**3) 월 경계 취소 반영 확인** `GET /api/settlements/monthly`
+
+sale-5는 1월 판매, cancel-3은 2월에 취소된 케이스입니다.
+```
+creatorId: creator-2
+month: 2025-01
+```
+예상 결과: `totalSalesAmount: 60000` / 취소 미반영 (취소는 2월 기준)
+
+```
+creatorId: creator-2
+month: 2025-02
+```
+예상 결과: `totalSalesAmount: 0` / `totalRefundAmount: 60000` / `payoutAmount: -48000`
+
+---
+
+**4) 빈 월 조회** `GET /api/settlements/monthly`
+```
+creatorId: creator-3
+month: 2025-03
+```
+예상 결과: `totalSalesAmount: 0` / `payoutAmount: 0`
+
+---
+
+**5) 운영자 정산 집계** `GET /api/admin/settlements`
+```
+startDate: 2025-03-01T00:00:00+09:00
+endDate:   2025-03-31T23:59:59+09:00
+```
+예상 결과: 전체 크리에이터 정산 목록 + 합계 반환
+
+---
+
+**3) 정산 확정 → 지급 상태 전이** (1번 조회 후 순서대로 실행)
+
+`POST /api/settlements/confirm`
+```
+creatorId: creator-1
+month: 2025-03
+```
+
+`POST /api/settlements/pay`
+```
+creatorId: creator-1
+month: 2025-03
+```
+
+---
+
+**4) CSV 다운로드** `GET /api/admin/settlements/export`
+```
+startDate: 2025-03-01T00:00:00+09:00
+endDate:   2025-03-31T23:59:59+09:00
+```
+예상 결과: `settlements.csv` 파일 다운로드
 
 ---
 

@@ -17,7 +17,7 @@ public class CancellationService {
                 request.getId(),
                 request.getSaleRecordId(),
                 request.getRefundAmount(),
-                request.getCanceledAt()
+                request.getCanceledAt().toLocalDateTime()
         );
 
         CancelRecord savedCancelRecord = cancelRecordRepository.save(cancelRecord);

@@ -25,9 +25,9 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.YearMonth;
-import java.time.ZoneOffset;
 import java.util.List;
 
 @Service
@@ -86,21 +86,9 @@ public class SettlementService {
             );
         }
 
-        // 조회 시작일 계산
-        // 예: 2025-03-01 00:00:00 +09:00
-        // 즉, 해당 월의 첫날 시작 시간
-        OffsetDateTime startDate = yearMonth
-                .atDay(1) // 1일로 설정
-                .atStartOfDay() // 00:00:00으로 설정
-                .atOffset(ZoneOffset.ofHours(9)); // 한국 시간(KST)
-
-        // 조회 종료일 계산
-        // 예: 2025-03-31 23:59:59 +09:00
-        // 즉, 해당 월의 마지막 날 끝 시간
-        OffsetDateTime endDate = yearMonth
-                .atEndOfMonth() // 해당 월의 마지막 날짜
-                .atTime(23, 59, 59) // 하루의 마지막 시간
-                .atOffset(ZoneOffset.ofHours(9)); // 한국 시간(KST)
+        // 해당 월 1일 00:00:00 이상, 다음 월 1일 00:00:00 미만으로 조회
+        LocalDateTime startDate = yearMonth.atDay(1).atStartOfDay();
+        LocalDateTime endDate = yearMonth.plusMonths(1).atDay(1).atStartOfDay();
 
         // 1. creatorId로 해당 크리에이터의 강의 목록 조회
         List<Course> courses = courseRepository.findByCreatorId(creatorId);
@@ -112,7 +100,7 @@ public class SettlementService {
                 .toList(); // Course 객체 -> id만 꺼냄
 
         // 3. 해당 강의들의 판매 내역 조회
-        List<SaleRecord> sales = saleRecordRepository.findByCourseIdInAndPaidAtBetween(courseIds, startDate, endDate);
+        List<SaleRecord> sales = saleRecordRepository.findByCourseIdInAndPaidAtGreaterThanEqualAndPaidAtLessThan(courseIds, startDate, endDate);
 
         // 4. 판매 내역에서 saleRecordId만 추출
         // CancelRecord는 saleRecordId를 기준으로 연결
@@ -125,7 +113,7 @@ public class SettlementService {
 
         List<CancelRecord> cancels = allCreatorSaleIds.isEmpty()
                 ? List.of()
-                : cancelRecordRepository.findBySaleRecordIdInAndCanceledAtBetween(
+                : cancelRecordRepository.findBySaleRecordIdInAndCanceledAtGreaterThanEqualAndCanceledAtLessThan(
                 allCreatorSaleIds,
                 startDate,
                 endDate
@@ -204,8 +192,8 @@ public class SettlementService {
     }
 
     public AdminSettlementSummaryResponse getAdminSettlementSummary(String startDate, String endDate) {
-        OffsetDateTime start = OffsetDateTime.parse(startDate);
-        OffsetDateTime end = OffsetDateTime.parse(endDate);
+        LocalDateTime start = OffsetDateTime.parse(startDate).toLocalDateTime();
+        LocalDateTime end = OffsetDateTime.parse(endDate).toLocalDateTime();
 
         List<Creator> creators = creatorRepository.findAll();
 
@@ -218,7 +206,7 @@ public class SettlementService {
                             .toList();
 
                     List<SaleRecord> sales = saleRecordRepository
-                            .findByCourseIdInAndPaidAtBetween(courseIds, start, end);
+                            .findByCourseIdInAndPaidAtGreaterThanEqualAndPaidAtLessThan(courseIds, start, end);
 
                     List<SaleRecord> allCreatorSales =
                             saleRecordRepository.findByCourseIdIn(courseIds);
@@ -230,7 +218,7 @@ public class SettlementService {
                     List<CancelRecord> cancels =
                             allCreatorSaleIds.isEmpty()
                                     ? List.of()
-                                    : cancelRecordRepository.findBySaleRecordIdInAndCanceledAtBetween(
+                                    : cancelRecordRepository.findBySaleRecordIdInAndCanceledAtGreaterThanEqualAndCanceledAtLessThan(
                                     allCreatorSaleIds,
                                     start,
                                     end

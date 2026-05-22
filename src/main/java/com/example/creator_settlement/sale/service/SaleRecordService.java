@@ -19,7 +19,7 @@ public class SaleRecordService {
             request.getCourseId(),
             request.getStudentId(),
             request.getAmount(),
-            OffsetDateTime.parse(request.getPaidAt())
+            OffsetDateTime.parse(request.getPaidAt()).toLocalDateTime()
         );
 
         return saleRecordRepository.save(saleRecord);

@@ -7,7 +7,7 @@ import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-import java.time.OffsetDateTime;
+import java.time.LocalDateTime;
 
 @Entity
 @Getter
@@ -24,9 +24,9 @@ public class CancelRecord {
     private Long refundAmount; // 환불 금액
 
     @Column(nullable = false)
-    private OffsetDateTime canceledAt; // 취소 일시
+    private LocalDateTime canceledAt; // 취소 일시 (KST)
 
-    public CancelRecord(String id, String saleRecordId, Long refundAmount, OffsetDateTime canceledAt) {
+    public CancelRecord(String id, String saleRecordId, Long refundAmount, LocalDateTime canceledAt) {
         this.id = id;
         this.saleRecordId = saleRecordId;
         this.refundAmount = refundAmount;
