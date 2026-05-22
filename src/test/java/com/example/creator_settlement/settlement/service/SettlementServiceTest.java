@@ -91,4 +91,24 @@ public class SettlementServiceTest {
         assertThrows(ResponseStatusException.class,
                 () -> settlementService.paySettlement("creator-1", "2025-03"));
     }
+
+    @Test
+    void creator1_4월_동일월_다수취소() {
+        SettlementResponse result =
+                settlementService.getMonthlySettlement("creator-1", "2025-04");
+
+        assertEquals(250000, result.getTotalSalesAmount());
+        assertEquals(150000, result.getTotalRefundAmount());
+        assertEquals(100000, result.getNetSalesAmount());
+        assertEquals(15000,  result.getPlatformFeeAmount());
+        assertEquals(85000,  result.getPayoutAmount());
+        assertEquals(3, result.getSaleCount());
+        assertEquals(2, result.getCancelCount());
+    }
+
+    @Test
+    void 잘못된_연월_형식_예외() {
+        assertThrows(ResponseStatusException.class,
+                () -> settlementService.getMonthlySettlement("creator-1", "2025/03"));
+    }
 }
