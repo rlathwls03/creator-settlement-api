@@ -314,7 +314,7 @@ public class SettlementService {
 
         StringBuilder csv = new StringBuilder();
 
-        csv.append("creatorId, payoutAmount\n");
+        csv.append("creatorId,payoutAmount\n");
 
         for (AdminSettlementResponse settlement : result.getSettlements()) {
             csv.append(settlement.getCreatorId()).append(",").append(settlement.getPayoutAmount()).append("\n");

@@ -15,7 +15,7 @@
 ## 기술 스택
 
 - Java 17
-- Spring Boot
+- Spring Boot 4.0.6
 - Spring Data JPA
 - MySQL 8.0
 - Gradle
@@ -130,7 +130,7 @@ endDate:   2025-03-31T23:59:59+09:00
 
 ---
 
-**3) 정산 확정 → 지급 상태 전이** (1번 조회 후 순서대로 실행)
+**6) 정산 확정 → 지급 상태 전이** (1번 조회 후 순서대로 실행)
 
 `POST /api/settlements/confirm`
 ```
@@ -146,7 +146,7 @@ month: 2025-03
 
 ---
 
-**4) CSV 다운로드** `GET /api/admin/settlements/export`
+**7) CSV 다운로드** `GET /api/admin/settlements/export`
 ```
 startDate: 2025-03-01T00:00:00+09:00
 endDate:   2025-03-31T23:59:59+09:00
@@ -317,6 +317,28 @@ GET /api/admin/settlements/export
 
 ## API 목록 및 예시
 
+### 판매 내역 조회
+
+```http
+GET /api/sales?creatorId=creator-1&startDate=2025-03-01T00:00:00+09:00&endDate=2025-03-31T23:59:59+09:00
+```
+
+응답
+
+```json
+[
+  {
+    "id": "sale-1",
+    "courseId": "course-1",
+    "studentId": "student-1",
+    "amount": 50000,
+    "paidAt": "2025-03-05T10:00:00"
+  }
+]
+```
+
+---
+
 ### 판매 등록
 
 ```http
@@ -447,12 +469,20 @@ GET /api/admin/settlements/export?startDate=2025-03-01T00:00:00+09:00&endDate=20
 
 ### Settlement
 
+- id (`creatorId + "-" + month` 형태의 복합 PK)
 - creatorId
 - month
 - totalSalesAmount
 - totalRefundAmount
+- netSalesAmount
+- platformFeeAmount
 - payoutAmount
-- status
+- saleCount
+- cancelCount
+- status (`PENDING` / `CONFIRMED` / `PAID`)
+- createdAt
+- confirmedAt
+- paidAt
 
 ---
 
@@ -483,6 +513,13 @@ FeePolicy
 ---
 
 ## 테스트 실행 방법
+
+> **주의**: 테스트는 H2 인메모리 DB가 아닌 실제 MySQL에 연결합니다.
+> `./gradlew test` 실행 전에 MySQL 서버가 실행 중이어야 합니다. (`실행 방법` 섹션 참고)
+
+```bash
+./gradlew test
+```
 
 ### 정상 정산
 
@@ -637,10 +674,12 @@ cancel-3
 ---
 ## AI 활용 범위
 
-- 설계 방향 검토
-- API 구조 리뷰
-- 테스트 시나리오 설계
-- README 문서화 보조
+본 과제 수행 과정에서 ChatGPT와 Claude를 보조 도구로 활용했습니다.
 
-AI를 보조 도구로 활용하였으며, 제안된 내용을 직접 검토·수정하고 최종 설계·구현·테스트 및 검증은 직접 수행했습니다.   
-생성된 결과는 실제 실행 및 테스트를 통해 검증 후 반영했습니다.
+### 활용 범위
+
+- Spring Boot 코드 구조 및 구현 방향 검토
+- 정산 계산 로직 구현 과정에서 필요한 코드 예시 참고
+- 오류 원인 분석 및 해결 방법 확인
+- 테스트 케이스 설계 보조
+- README 작성 및 문장 정리 보조
